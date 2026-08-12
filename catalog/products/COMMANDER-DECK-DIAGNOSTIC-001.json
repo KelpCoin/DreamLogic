@@ -1,0 +1,14 @@
+{
+  "id": "COMMANDER-DECK-DIAGNOSTIC-001",
+  "name": "Commander Deck Diagnostic",
+  "price": 25,
+  "currency": "nzd",
+  "status": "published",
+  "checkout_available": true,
+  "approval_required": false,
+  "inventory": 999999,
+  "gauntlet_status": "PASS",
+  "silo": "MTG",
+  "fossil_path": "Proof/Fossils/FIRST_PAYMENT_PROOF.json",
+  "fulfilment": "Human-delivered diagnostic report after verified payment"
+}
