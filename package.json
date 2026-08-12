@@ -1,0 +1,20 @@
+{
+  "name": "dreamledger-prime",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BEC-PRIME DreamLedger revenue and canonical QR engine",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "compile:offers": "node scripts/compile-offers.js",
+    "compile:surface": "node scripts/compile-surface.js",
+    "build": "npm run compile:offers && npm run compile:surface",
+    "verify": "node scripts/verify.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "express": "^5.1.0",
+    "qrcode": "^1.5.4",
+    "stripe": "^19.1.0"
+  }
+}
