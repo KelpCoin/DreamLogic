@@ -1,16 +1,14 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const root = path.join(__dirname, '..');
-const required = ['server.js','render.yaml','package.json','catalog/products/COMMANDER-DECK-DIAGNOSTIC-001.json','config/qr-routes.json','index.html','success.html'];
-let pass = true;
-for (const rel of required) { const ok = fs.existsSync(path.join(root, rel)); console.log(`${ok ? 'PASS' : 'FAIL'} ${rel}`); pass = pass && ok; }
-const product = JSON.parse(fs.readFileSync(path.join(root, 'catalog/products/COMMANDER-DECK-DIAGNOSTIC-001.json')));
-for (const [k,v] of [['id', 'COMMANDER-DECK-DIAGNOSTIC-001'],['currency','nzd'],['status','published'],['checkout_available',true],['approval_required',false]]) { const ok = product[k] === v; console.log(`${ok ? 'PASS' : 'FAIL'} offer.${k}`); pass = pass && ok; }
-const fossil = path.join(root, 'Proof/Fossils/FIRST_PAYMENT_PROOF.json');
-if (fs.existsSync(fossil)) {
-  const f = JSON.parse(fs.readFileSync(fossil));
-  const ok = f.status === 'PASS' && typeof f.transaction_id === 'string' && f.transaction_id.length > 0;
-  console.log(`${ok ? 'PASS' : 'FAIL'} FIRST_PAYMENT_PROOF live transaction evidence`); pass = pass && ok;
-} else console.log('INFO FIRST_PAYMENT_PROOF not present: no live payment has been observed yet');
-console.log(pass ? 'VERIFY PASS' : 'VERIFY FAIL');
-process.exitCode = pass ? 0 : 1;
+const fs=require('node:fs');const path=require('node:path');const root=path.join(__dirname,'..');let pass=true;
+function check(name,ok,detail=''){console.log(`${ok?'PASS':'FAIL'} ${name}${detail?' - '+detail:''}`);pass=pass&&ok}
+const required=['server.js','render.yaml','package.json','index.html','success.html','ip.html','engine.html','revenue.html','register.html','dreamiez/register.html','dreamiez/login.html','dreamiez/index.html','mtg.html','kelplantis.html','assets/shared-asset-schema.json','catalog/products/COMMANDER-DECK-DIAGNOSTIC-001.json'];
+for(const rel of required)check(rel,fs.existsSync(path.join(root,rel)));
+const product=JSON.parse(fs.readFileSync(path.join(root,'catalog/products/COMMANDER-DECK-DIAGNOSTIC-001.json')));check('approval registry gate',product.checkout_available===false&&product.approval_required===true,'no checkout-enabled offer while approval registry is empty');
+const server=fs.readFileSync(path.join(root,'server.js'),'utf8');check('server approval enforcement',server.includes("offer_not_approved")&&server.includes('offer.approval_required'));check('no kelp-atlantis route',!server.toLowerCase().includes('kelp-atlantis')&&!server.toLowerCase().includes('kelp atlantis'));check('real payment fossil only',server.includes('constructEvent')&&server.includes('FIRST_PAYMENT_PROOF.json'));
+const index=fs.readFileSync(path.join(root,'index.html'),'utf8');check('neutral horizontal carousel',index.includes('overflow-x:auto')&&index.includes('scroll-snap-type:x mandatory'));check('silo names',index.includes('Dreamiez')&&index.includes('Kelplantis')&&index.includes('MTG')&&index.includes('BEC-PRIME'));
+const ip=fs.readFileSync(path.join(root,'ip.html'),'utf8');for(const term of ['Constitution','CUBE Compiler','Multi-LLM','Persistent Economic Memory','Browning Gauntlet','Commerce Spine','Fossil Evidence','Independent Silos','Demand Radar','Elohim Refinery','Truth Boundary','Neutral Front Door','Humaniser','Approval Governor','Revenue OS','Digital Proxy','Silo Integrity'])check('IP '+term,ip.includes(term));
+const engine=fs.readFileSync(path.join(root,'engine.html'),'utf8');check('engine loop',engine.includes('DEMAND')&&engine.includes('REFINE')&&engine.includes('GAUNTLET')&&engine.includes('COMPILE')&&engine.includes('DISTRIBUTE')&&engine.includes('CHECKOUT')&&engine.includes('PAYMENT')&&engine.includes('FOSSIL')&&engine.includes('MEMORY')&&engine.includes('ITERATE'));
+const revenue=fs.readFileSync(path.join(root,'revenue.html'),'utf8');check('revenue truth surface',revenue.includes('genuinely approved offer')&&!revenue.includes('fake checkout'));
+const assets=JSON.parse(fs.readFileSync(path.join(root,'assets/shared-asset-schema.json')));check('shared asset schema',assets.schema_version==='BEC-SHARED-ASSET-1.0'&&assets.silos.includes('DREAMIEZ')&&assets.silos.includes('KELPLANTIS'));
+const dream=fs.readFileSync(path.join(root,'dreamiez/index.html'),'utf8');check('Dreamiez face customization',dream.includes('faceSelect'));check('Dreamiez streak persistence',dream.includes('localStorage')&&dream.includes('streak'));check('daily cosmetic gate',dream.includes('claimed')&&dream.includes('Daily cosmetic'));
+const fossil=path.join(root,'Proof/Fossils/FIRST_PAYMENT_PROOF.json');if(fs.existsSync(fossil)){const f=JSON.parse(fs.readFileSync(fossil));check('FIRST_PAYMENT_PROOF live transaction evidence',f.status==='PASS'&&typeof f.transaction_id==='string'&&f.transaction_id.length>0)}else console.log('INFO FIRST_PAYMENT_PROOF not present: no live payment has been observed yet');
+console.log(pass?'VERIFY PASS':'VERIFY FAIL');process.exitCode=pass?0:1;
