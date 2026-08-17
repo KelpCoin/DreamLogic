@@ -1,19 +1,36 @@
 name: Deploy to Render
 
 on:
-  workflow_run:
-    workflows: ["Verify DreamLedger"]
-    types:
-      - completed
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: dreamledger-render-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify before deploy
+        run: npm run verify
+
       - name: Trigger Render Deploy
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
@@ -21,3 +38,4 @@ jobs:
           set -euo pipefail
           test -n "$RENDER_DEPLOY_HOOK_URL"
           curl --fail --silent --show-error --request POST "$RENDER_DEPLOY_HOOK_URL"
+          echo "RENDER_DEPLOY_TRIGGER=PASS"
