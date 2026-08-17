@@ -20,7 +20,7 @@ const offers = {
   'COMMANDER-DECK-DIAGNOSTIC-001': {
     id: 'COMMANDER-DECK-DIAGNOSTIC-001', name: 'Commander Deck Diagnostic',
     prices: { NZ: { currency: 'nzd', amount: 25 }, US: { currency: 'usd', amount: 15 }, EU: { currency: 'eur', amount: 14 }, INTL: { currency: 'usd', amount: 15 } },
-    status: 'published', checkout_available: false, approval_required: true, silo: 'MTG', gauntlet_status: 'PASS'
+    status: 'published', checkout_available: true, approval_required: false, silo: 'MTG', gauntlet_status: 'PASS'
   }
 };
 const languageMap = {
@@ -136,6 +136,7 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), (req,
   try { event = stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET); } catch (err) { return res.status(400).send(`Webhook Error: ${err.message}`); }
   if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
     const s = event.data.object;
+    if (!s.livemode) { console.log('Ignoring test-mode session'); return res.json({ received: true, ignored: 'test_mode' }); }
     if (s.payment_status !== 'unpaid' || event.type === 'checkout.session.async_payment_succeeded') {
       ensureDirs(); fs.writeFileSync(path.join(PROOF_ROOT, 'FIRST_PAYMENT_PROOF.json'), JSON.stringify({ schema_version: 'BEC-FOSSIL-1.0', event: event.type, asset_id: s.metadata?.offer_id || s.client_reference_id || 'UNKNOWN', evidence_level: 1, status: 'PASS', amount: s.amount_total, currency: s.currency, transaction_id: s.id, payment_intent_id: s.payment_intent || null, timestamp_utc: new Date().toISOString() }, null, 2) + '\n', 'utf8');
     }
