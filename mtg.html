@@ -3,63 +3,88 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DreamLedger | MTG</title>
+<meta name="description" content="DreamLedger Commander Deck Diagnostic - a one-off MTG deck review for NZ$25.">
+<title>DreamLedger | Commander Deck Diagnostic</title>
 <style>
-body{margin:0;font-family:system-ui,sans-serif;background:#05070b;color:#eef}
-main{max-width:1200px;margin:auto;padding:32px 20px}
-a{color:#7ee7ff;text-decoration:none}
-.rail{display:flex;gap:18px;overflow-x:auto;scroll-snap-type:x mandatory;padding:18px 2px 28px}
-.card{flex:0 0 300px;scroll-snap-align:start;border:1px solid #28384d;border-radius:18px;padding:16px;background:#0b1018;box-sizing:border-box}
-.photo{width:100%;height:210px;border-radius:12px;background:#111a25;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.photo img{width:100%;height:100%;object-fit:contain}
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#05070b;color:#eef2ff}
+main{max-width:1080px;margin:auto;padding:28px 20px 64px}
+a{color:#8be9ff;text-decoration:none}
+.nav{display:flex;justify-content:space-between;align-items:center;gap:20px;padding-bottom:36px}
+.badge{display:inline-block;padding:6px 10px;border:1px solid #29415a;border-radius:999px;color:#9fb7cc;font-size:13px}
+.hero{padding:28px 0 18px}
+h1{font-size:clamp(38px,7vw,72px);line-height:.98;letter-spacing:-.04em;margin:12px 0 20px;max-width:820px}
+.lead{font-size:20px;line-height:1.5;color:#b9c5d6;max-width:720px}
+.grid{display:grid;grid-template-columns:1.35fr .8fr;gap:22px;margin-top:34px}
+.panel{border:1px solid #28384d;border-radius:20px;padding:24px;background:#0b1018;box-shadow:0 18px 50px rgba(0,0,0,.2)}
+.panel h2{margin-top:0;font-size:24px}
+.points{display:grid;gap:12px;margin:20px 0 0;padding:0;list-style:none}
+.points li{padding:13px 14px;border-radius:12px;background:#101824;color:#cbd5e1}
+.price{font-size:42px;font-weight:800;letter-spacing:-.03em;margin:8px 0}
 .muted{color:#9baabd}
-.buy{display:block;width:100%;margin-top:14px;padding:12px 16px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer}
+.buy{display:block;width:100%;margin-top:18px;padding:14px 16px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-weight:800;font-size:16px;cursor:pointer}
 .buy:disabled{opacity:.55;cursor:wait}
+.small{font-size:13px;line-height:1.5}
 .error{padding:16px;border:1px solid #6b2630;border-radius:12px;color:#ffb4bd;background:#210d11}
+#status{min-height:20px;margin-top:14px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.nav{align-items:flex-start}}
 </style>
 </head>
 <body>
 <main>
-<p><a href="/">DreamLedger</a></p>
-<h1>MTG Catalogue</h1>
-<p class="muted">Live MTG offers. Swipe horizontally to browse.</p>
-<section id="deck-carousel-container" aria-label="MTG catalogue"><p class="muted">Loading live catalogue...</p></section>
+<nav class="nav"><a href="/">DreamLedger</a><span class="badge">MTG commerce</span></nav>
+<section class="hero">
+<span class="badge">ONE-OFF SERVICE - NO SUBSCRIPTION</span>
+<h1>Commander Deck Diagnostic</h1>
+<p class="lead">Find the biggest weaknesses in your Commander deck, the first cuts to make, and the highest-value upgrades that fit your budget.</p>
+</section>
+<section class="grid" aria-label="Commander Deck Diagnostic offer">
+<article class="panel">
+<h2>What you get</h2>
+<ul class="points">
+<li>Biggest structural weaknesses identified</li>
+<li>First cuts ranked by impact</li>
+<li>Highest-value upgrade recommendations</li>
+<li>Advice constrained to your stated budget and goals</li>
+</ul>
+<p class="muted small" style="margin-top:22px">Send your decklist after purchase. This is a one-off diagnostic, not a recurring subscription.</p>
+</article>
+<aside class="panel">
+<p class="muted">Commander Deck Diagnostic</p>
+<div class="price">NZ$25</div>
+<p class="muted">One-off payment</p>
+<button id="buy" class="buy" type="button">Buy Now</button>
+<div id="status" class="muted small" role="status" aria-live="polite"></div>
+</aside>
+</section>
+<section class="panel" style="margin-top:22px">
+<h2>How it works</h2>
+<p class="muted">1. Purchase the diagnostic. 2. Send your Commander decklist and goals. 3. Receive a focused breakdown of weaknesses, cuts and upgrades.</p>
+</section>
 </main>
 <script>
 (function(){
-  const container=document.getElementById('deck-carousel-container');
-  function esc(value){return String(value==null?'':value).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]});}
-  function buyOffer(offerId,button){
+  const button=document.getElementById('buy');
+  const status=document.getElementById('status');
+  const offerId='COMMANDER-DECK-DIAGNOSTIC-001';
+  function buy(){
     button.disabled=true;
     button.textContent='Opening checkout...';
+    status.textContent='Connecting to secure checkout...';
     fetch('/api/offer-checkout/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({offer_id:offerId,region:'NZ'})})
       .then(function(res){return res.json().then(function(data){return {ok:res.ok,data:data};});})
       .then(function(result){
         if(!result.ok || !result.data.url) throw new Error(result.data.error || 'No checkout URL returned');
         window.location.href=result.data.url;
       })
-      .catch(function(err){button.disabled=false;button.textContent='Buy Now';alert('Checkout failed: '+err.message);});
-  }
-  fetch('/api/offers')
-    .then(function(res){if(!res.ok) throw new Error('Offers API returned HTTP '+res.status);return res.json();})
-    .then(function(offers){
-      const items=offers.filter(function(p){return p && String(p.silo||'').toUpperCase()==='MTG' && p.status==='published' && p.checkout_available;});
-      if(!items.length){container.innerHTML='<p class="muted">No published MTG offers are currently available.</p>';return;}
-      const rail=document.createElement('div');rail.className='rail';
-      items.forEach(function(item){
-        const card=document.createElement('article');card.className='card';
-        const price=item.prices && item.prices.NZ ? item.prices.NZ.amount : null;
-        card.innerHTML='<div class="photo"><span class="muted">MTG</span></div>'+
-          '<h2>'+esc(item.name||item.id)+'</h2>'+
-          '<p class="muted">MTG offer</p>'+
-          '<p><strong>'+(price==null?'Price unavailable':'NZ$ '+esc(price))+'</strong></p>'+
-          '<button class="buy" type="button">Buy Now</button>';
-        card.querySelector('.buy').addEventListener('click',function(){buyOffer(item.id,this);});
-        rail.appendChild(card);
+      .catch(function(err){
+        button.disabled=false;
+        button.textContent='Buy Now';
+        status.textContent='Checkout unavailable: '+err.message;
       });
-      container.replaceChildren(rail);
-    })
-    .catch(function(err){container.innerHTML='<div class="error">Unable to load the live MTG catalogue: '+esc(err.message)+'</div>';});
+  }
+  button.addEventListener('click',buy);
 })();
 </script>
 </body>
