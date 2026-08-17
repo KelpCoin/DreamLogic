@@ -22,9 +22,12 @@ jobs:
         run: |
           set -euo pipefail
           curl --fail --silent --show-error --location --max-time 20 https://dreamledger.org/mtg -o /tmp/mtg.html
-          grep -q 'MTG Catalogue' /tmp/mtg.html
+          grep -q 'MTG' /tmp/mtg.html
           grep -q "fetch('/api/offers')" /tmp/mtg.html
-          grep -q 'Buy Now' /tmp/mtg.html
+          grep -Eq 'Buy (Now|securely with Stripe)' /tmp/mtg.html
+          grep -q "fetch('/api/offer-checkout/create'" /tmp/mtg.html
+          grep -q 'offer_id:' /tmp/mtg.html
+          grep -q 'data-offer' /tmp/mtg.html
           echo 'PASS production MTG surface'
 
       - name: Verify production offers contract
