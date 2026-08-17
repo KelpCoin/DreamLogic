@@ -1,8 +1,10 @@
 name: Live Commerce Gate
 
 on:
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: ["Deploy to Render"]
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -11,6 +13,7 @@ permissions:
 jobs:
   live-commerce:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Verify production health
         run: |
