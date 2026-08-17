@@ -20,7 +20,7 @@ const offers = {
   'COMMANDER-DECK-DIAGNOSTIC-001': {
     id: 'COMMANDER-DECK-DIAGNOSTIC-001', name: 'Commander Deck Diagnostic',
     prices: { NZ: { currency: 'nzd', amount: 25 }, US: { currency: 'usd', amount: 15 }, EU: { currency: 'eur', amount: 14 }, INTL: { currency: 'usd', amount: 15 } },
-    status: 'published', checkout_available: true, approval_required: false, silo: 'MTG', gauntlet_status: 'PASS'
+    status: 'published', checkout_available: true, approval_required: false, silo: 'MTG', gauntlet_status: 'PASS', stripe_price_env: { NZ: 'STRIPE_PRICE_NZ', US: 'STRIPE_PRICE_US', EU: 'STRIPE_PRICE_EU', INTL: 'STRIPE_PRICE_INTL' }
   }
 };
 const languageMap = {
@@ -63,6 +63,33 @@ function readCatalogProducts() {
     try { return JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); } catch (_) { return null; }
   }).filter(Boolean);
 }
+function catalogMtgOffers() {
+  return readCatalogProducts()
+    .filter(x => String(x.silo || '').toUpperCase() === 'MTG')
+    .filter(x => String(x.status || '').toLowerCase() === 'published')
+    .map(x => ({
+      ...x,
+      prices: x.prices || (Number.isFinite(Number(x.price_nzd ?? x.price)) ? { NZ: { currency: 'nzd', amount: Number(x.price_nzd ?? x.price) } } : undefined),
+      checkout_available: x.checkout_available === true && x.approval_required !== true,
+      approval_required: x.approval_required === true,
+      stripe_price_env: x.stripe_price_env || null
+    }));
+}
+function publicOffers() {
+  const merged = new Map(Object.entries(offers));
+  for (const product of catalogMtgOffers()) {
+    if (product.id && !merged.has(product.id)) merged.set(product.id, product);
+  }
+  return [...merged.values()];
+}
+function findOffer(id) { return publicOffers().find(x => String(x.id) === String(id)); }
+function stripePriceEnvFor(offer, region) {
+  const map = offer?.stripe_price_env;
+  if (map && typeof map === 'object' && map[region]) return map[region];
+  if (offer?.id === 'COMMANDER-DECK-DIAGNOSTIC-001') return `STRIPE_PRICE_${region}`;
+  return null;
+}
+
 function marketplaceCatalog() {
   const tracked = readCatalogProducts().filter(x => String(x.silo || '').toUpperCase() === 'B2B');
   const submitted = readJson('marketplace-listings.json', []).filter(x => x.state === 'APPROVED' && String(x.silo || '').toUpperCase() === 'B2B');
@@ -146,7 +173,7 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), (req,
 app.use(express.json({ limit: '1mb' }));
 app.use('/static', express.static(path.join(ROOT, 'public')));
 app.get('/healthz', (req, res) => res.status(200).json({ status: 'ok', service: 'dreamledger', time_utc: new Date().toISOString() }));
-app.get('/api/offers', (req, res) => res.json(Object.values(offers)));
+app.get('/api/offers', (req, res) => res.json(publicOffers()));
 app.get('/api/shared-assets/schema', (req, res) => res.sendFile(path.join(ROOT, 'assets', 'shared-asset-schema.json')));
 app.get('/api/qr/:code/stats', (req, res) => res.json({ code: req.params.code, note: 'Scan logs are local to this service unless an external sink is configured.' }));
 app.get('/api/proof/first-payment', (req, res) => { const f = path.join(PROOF_ROOT, 'FIRST_PAYMENT_PROOF.json'); if (!fs.existsSync(f)) return res.status(404).json({ status: 'NOT_FOUND', evidence: 'No live payment fossil has been observed.' }); res.type('application/json').send(fs.readFileSync(f, 'utf8')); });
@@ -154,8 +181,8 @@ async function qrResponse(req, res) { const url = `${QR_BASE_DOMAIN}/${encodeURI
 app.get('/api/qr/generate', qrResponse); app.post('/api/qr/generate', qrResponse);
 app.get('/api/qr/:code.png', async (req, res) => { if (req.params.code !== QR_CODE) return res.status(404).end(); res.type('png').send(await QRCode.toBuffer(`${QR_BASE_DOMAIN}/${encodeURIComponent(QR_CODE)}`, { errorCorrectionLevel: 'H', margin: 2, width: 1200 })); });
 app.get('/qr/:code', (req, res) => { if (req.params.code !== QR_CODE) return res.status(404).send('Unknown QR code'); const country = detectCountry(req), language = detectLanguage(req), region = regionFor(country), destination = `${BASE_URL}/${region.toLowerCase()}?lang=${encodeURIComponent(language)}`; try { logScan({ code: QR_CODE, scan_time: new Date().toISOString(), country, region, language, user_agent: req.get('user-agent') || '', destination_url: destination }); } catch (_) {} res.redirect(302, destination); });
-app.get('/:region', (req, res, next) => { const region = String(req.params.region || '').toUpperCase(); if (!['NZ','US','EU','INTL'].includes(region)) return next(); const language = detectLanguage(req), t = languageMap[language] || languageMap.en, p = money(region), html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').replace(/__DL_HERO__/g, t.hero).replace(/__DL_SUB__/g, t.sub).replace(/__DL_CTA__/g, t.cta).replace(/__DL_PROOF__/g, t.proof).replace(/__DL_REGION__/g, region).replace(/__DL_PRICE__/g, `${p.currency.toUpperCase()} ${p.amount}`).replace(/__DL_LANG__/g, language); res.set('Content-Language', language).send(html); });
-app.post('/api/offer-checkout/create', async (req, res) => { try { const id = String(req.body?.offer_id || ''), offer = offers[id]; if (!offer) return res.status(404).json({ error: 'unknown_offer' }); if (offer.approval_required || !offer.checkout_available) return res.status(403).json({ error: 'offer_not_approved', message: 'Checkout is disabled until the offer is explicitly approved.' }); if (!process.env.STRIPE_SECRET_KEY) return res.status(503).json({ error: 'stripe_not_configured' }); const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY), requested = String(req.body?.region || '').toUpperCase(), region = ['NZ','US','EU','INTL'].includes(requested) ? requested : regionFor(String(req.body?.country || DEFAULT_COUNTRY).toUpperCase()), priceKey = `STRIPE_PRICE_${region}`, priceId = process.env[priceKey]; if (!priceId) return res.status(503).json({ error: 'price_not_configured', region, required_env: priceKey }); const s = await stripe.checkout.sessions.create({ mode: 'payment', line_items: [{ price: priceId, quantity: 1 }], client_reference_id: id, metadata: { offer_id: id, silo: offer.silo, region }, success_url: `${BASE_URL}/success.html?session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${BASE_URL}/${region.toLowerCase()}?cancelled=1` }); res.json({ url: s.url, session_id: s.id, offer_id: id, region }); } catch (_) { res.status(500).json({ error: 'checkout_create_failed' }); } });
+app.get('/:region', (req, res, next) => { const region = String(req.params.region || '').toUpperCase(); if (!['NZ','US','EU','INTL'].includes(region)) return next(); const language = detectLanguage(req), t = languageMap[language] || languageMap.en, p = money(region), html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').replace(/__DL_HERO__/g, t.hero).replace(/__DL_SUB__/g, t.sub).replace(/__DL_CTA__/g, t.cta).replace(/__DL_PROOF__/g, t.proof).replace(/__DL_REGION__/g, region).replace(/__DL_PRICE__/g, `${p.currency.toUpperCase()} ${p.amount}`).replace(/__DL_LANG__/g, language).replace(/__DL_LANG__/g, language); res.set('Content-Language', language).send(html); });
+app.post('/api/offer-checkout/create', async (req, res) => { try { const id = String(req.body?.offer_id || ''), offer = findOffer(id); if (!offer) return res.status(404).json({ error: 'unknown_offer' }); if (offer.approval_required || !offer.checkout_available) return res.status(403).json({ error: 'offer_not_approved', message: 'Checkout is disabled until the offer is explicitly approved.' }); if (!process.env.STRIPE_SECRET_KEY) return res.status(503).json({ error: 'stripe_not_configured' }); const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY), requested = String(req.body?.region || '').toUpperCase(), region = ['NZ','US','EU','INTL'].includes(requested) ? requested : regionFor(String(req.body?.country || DEFAULT_COUNTRY).toUpperCase()), priceEnv = stripePriceEnvFor(offer, region), priceId = priceEnv ? process.env[priceEnv] : null; if (!priceId) return res.status(503).json({ error: 'price_not_configured', region, required_env: priceEnv || `offer-specific Stripe price mapping missing for ${id}` }); const s = await stripe.checkout.sessions.create({ mode: 'payment', line_items: [{ price: priceId, quantity: 1 }], client_reference_id: id, metadata: { offer_id: id, silo: offer.silo, region }, success_url: `${BASE_URL}/success.html?session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${BASE_URL}/${region.toLowerCase()}?cancelled=1` }); res.json({ url: s.url, session_id: s.id, offer_id: id, region }); } catch (_) { res.status(500).json({ error: 'checkout_create_failed' }); } });
 app.get('/marketplace', (req, res) => res.sendFile(path.join(ROOT, 'marketplace.html')));
 app.use((req, res, next) => { if (req.path === '/' || req.path === '/index.html') return res.sendFile(path.join(ROOT, 'index.html')); const map = { '/audits.html': 'audits.html', '/proofs.html': 'proofs.html', '/success.html': 'success.html', '/ip.html': 'ip.html', '/engine.html': 'engine.html', '/revenue.html': 'revenue.html', '/register.html': 'register.html', '/dreamiez/register.html': 'dreamiez/register.html', '/dreamiez/login.html': 'dreamiez/login.html', '/dreamiez/index.html': 'dreamiez/index.html', '/mtg': 'mtg.html', '/mtg.html': 'mtg.html', '/kelplantis.html': 'kelplantis.html' }; if (map[req.path]) return res.sendFile(path.join(ROOT, map[req.path])); next(); });
 app.use((req, res) => res.status(404).send('Not found'));
