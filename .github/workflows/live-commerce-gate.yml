@@ -12,13 +12,22 @@ jobs:
   live-commerce:
     runs-on: ubuntu-latest
     steps:
+      - name: Verify production health
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --max-time 20 https://dreamledger.org/healthz -o /tmp/healthz.json
+          node -e "const x=require('/tmp/healthz.json'); if(x.status!=='ok') throw new Error('healthz not ok'); console.log('PASS healthz')"
+
       - name: Verify production MTG route
         run: |
           set -euo pipefail
           curl --fail --silent --show-error --location --max-time 20 https://dreamledger.org/mtg -o /tmp/mtg.html
-          grep -q 'mtg.html' /tmp/mtg.html
+          grep -q 'MTG Catalogue' /tmp/mtg.html
+          grep -q "fetch('/api/offers')" /tmp/mtg.html
+          grep -q 'Buy Now' /tmp/mtg.html
+          echo 'PASS production MTG surface'
 
-      - name: Verify production offers endpoint
+      - name: Verify production offers contract
         run: |
           set -euo pipefail
           curl --fail --silent --show-error --location --max-time 20 https://dreamledger.org/api/offers -o /tmp/offers.json
@@ -28,10 +37,22 @@ jobs:
           const data = JSON.parse(raw);
           const offers = Array.isArray(data) ? data : (Array.isArray(data.offers) ? data.offers : []);
           if (!offers.length) throw new Error('Production offers endpoint returned zero offers');
-          const diagnostic = offers.find(x => String(x.id || x.offer_id || x.product_id || '').includes('COMMANDER-DECK-DIAGNOSTIC-001'));
+          const ids = new Set();
+          for (const offer of offers) {
+            if (!offer.id) throw new Error('Offer missing id');
+            if (ids.has(offer.id)) throw new Error(`Duplicate production offer id: ${offer.id}`);
+            ids.add(offer.id);
+            if (String(offer.silo || '').toUpperCase() === 'MTG' && offer.status === 'published' && offer.checkout_available === true && offer.id !== 'COMMANDER-DECK-DIAGNOSTIC-001') {
+              const map = offer.stripe_price_env;
+              if (!map || typeof map !== 'object') throw new Error(`Checkoutable MTG offer lacks Stripe mapping: ${offer.id}`);
+            }
+          }
+          const diagnostic = offers.find(x => String(x.id || '') === 'COMMANDER-DECK-DIAGNOSTIC-001');
           if (!diagnostic) throw new Error('COMMANDER-DECK-DIAGNOSTIC-001 not present in production offers');
+          const mtg = offers.filter(x => String(x.silo || '').toUpperCase() === 'MTG' && x.status === 'published');
           console.log(`PASS production offers=${offers.length}`);
-          console.log(`PASS commander diagnostic present`);
+          console.log(`PASS published MTG offers=${mtg.length}`);
+          console.log('PASS commander diagnostic present');
           NODE
 
       - name: Emit proof summary
@@ -39,5 +60,5 @@ jobs:
           echo "LIVE_COMMERCE_GATE=PASS"
           echo "MTG_ROUTE=https://dreamledger.org/mtg"
           echo "OFFERS=https://dreamledger.org/api/offers"
-          echo "EDH_0001=NOT_REQUIRED_FOR_THIS_GATE"
           echo "PAYMENT=NOT_VERIFIED_BY_THIS_GATE"
+          echo "LIVE_PAYMENT_PROOF=/api/proof/first-payment"
