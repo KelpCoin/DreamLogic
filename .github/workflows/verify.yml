@@ -25,3 +25,5 @@ jobs:
       - run: npm install
       - run: npm run build
       - run: npm run verify
+
+# CI ignition probe: push-trigger verification.
