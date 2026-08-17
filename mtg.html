@@ -21,18 +21,18 @@ a{color:#7ee7ff;text-decoration:none}
 <body>
 <main>
 <p><a href="/">DreamLedger</a></p>
-<h1>MTG Decks</h1>
-<p class="muted">Commander decks available now. Swipe horizontally to browse.</p>
-<section id="deck-carousel-container" aria-label="MTG deck catalogue"><p class="muted">Loading inventory...</p></section>
+<h1>MTG Catalogue</h1>
+<p class="muted">Live MTG offers. Swipe horizontally to browse.</p>
+<section id="deck-carousel-container" aria-label="MTG catalogue"><p class="muted">Loading live catalogue...</p></section>
 </main>
 <script>
 (function(){
   const container=document.getElementById('deck-carousel-container');
   function esc(value){return String(value==null?'':value).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]});}
-  function buyDeck(productId,button){
+  function buyOffer(offerId,button){
     button.disabled=true;
     button.textContent='Opening checkout...';
-    fetch('/api/checkout/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:productId,offer_id:productId})})
+    fetch('/api/offer-checkout/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({offer_id:offerId,region:'NZ'})})
       .then(function(res){return res.json().then(function(data){return {ok:res.ok,data:data};});})
       .then(function(result){
         if(!result.ok || !result.data.url) throw new Error(result.data.error || 'No checkout URL returned');
@@ -40,27 +40,26 @@ a{color:#7ee7ff;text-decoration:none}
       })
       .catch(function(err){button.disabled=false;button.textContent='Buy Now';alert('Checkout failed: '+err.message);});
   }
-  fetch('/api/products')
-    .then(function(res){if(!res.ok) throw new Error('Inventory API returned HTTP '+res.status);return res.json();})
-    .then(function(payload){
-      const products=Array.isArray(payload)?payload:(Array.isArray(payload.products)?payload.products:(Array.isArray(payload.listings)?payload.listings:[]));
-      const decks=products.filter(function(p){return p && p.id && String(p.id).toUpperCase().startsWith('EDH');});
-      if(!decks.length){container.innerHTML='<p class="muted">No Commander decks are currently available.</p>';return;}
+  fetch('/api/offers')
+    .then(function(res){if(!res.ok) throw new Error('Offers API returned HTTP '+res.status);return res.json();})
+    .then(function(offers){
+      const items=offers.filter(function(p){return p && String(p.silo||'').toUpperCase()==='MTG' && p.status==='published' && p.checkout_available;});
+      if(!items.length){container.innerHTML='<p class="muted">No published MTG offers are currently available.</p>';return;}
       const rail=document.createElement('div');rail.className='rail';
-      decks.forEach(function(deck){
+      items.forEach(function(item){
         const card=document.createElement('article');card.className='card';
-        const image=deck.image||deck.image_url||deck.photo;
-        card.innerHTML='<div class="photo">'+(image?'<img src="'+esc(image)+'" alt="'+esc(deck.name||deck.id)+'">':'<span class="muted">DECK PHOTO</span>')+'</div>'+
-          '<h2>'+esc(deck.name||deck.id)+'</h2>'+
-          '<p class="muted"><strong>Commander:</strong> '+esc(deck.commander||'Commander deck')+'</p>'+
-          '<p><strong>NZ$ '+esc(deck.price)+'</strong></p>'+
+        const price=item.prices && item.prices.NZ ? item.prices.NZ.amount : null;
+        card.innerHTML='<div class="photo"><span class="muted">MTG</span></div>'+
+          '<h2>'+esc(item.name||item.id)+'</h2>'+
+          '<p class="muted">MTG offer</p>'+
+          '<p><strong>'+(price==null?'Price unavailable':'NZ$ '+esc(price))+'</strong></p>'+
           '<button class="buy" type="button">Buy Now</button>';
-        card.querySelector('.buy').addEventListener('click',function(){buyDeck(deck.id,this);});
+        card.querySelector('.buy').addEventListener('click',function(){buyOffer(item.id,this);});
         rail.appendChild(card);
       });
       container.replaceChildren(rail);
     })
-    .catch(function(err){container.innerHTML='<div class="error">Unable to load the live deck inventory: '+esc(err.message)+'</div>';});
+    .catch(function(err){container.innerHTML='<div class="error">Unable to load the live MTG catalogue: '+esc(err.message)+'</div>';});
 })();
 </script>
 </body>
