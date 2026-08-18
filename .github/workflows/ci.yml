@@ -38,6 +38,9 @@ jobs:
       - name: Enforce silo boundaries
         run: node scripts/silo-integrity.js
 
+      - name: Truth Oracle / Gauntlet / Elohim ecosystem gate
+        run: node scripts/ecosystem-gate.js
+
       - name: Write CI proof
         if: always()
         run: |
