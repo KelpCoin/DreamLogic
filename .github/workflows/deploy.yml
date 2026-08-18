@@ -29,13 +29,48 @@ jobs:
         run: npm run build
 
       - name: Verify before deploy
+        id: verify
         run: npm run verify
 
       - name: Trigger Render Deploy
+        id: render
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
           set -euo pipefail
           test -n "$RENDER_DEPLOY_HOOK_URL"
-          curl --fail --silent --show-error --request POST "$RENDER_DEPLOY_HOOK_URL"
+          RESPONSE=$(curl --fail --silent --show-error --request POST "$RENDER_DEPLOY_HOOK_URL")
+          {
+            echo "RENDER_RESPONSE<<EOF"
+            echo "$RESPONSE"
+            echo "EOF"
+          } >> "$GITHUB_ENV"
           echo "RENDER_DEPLOY_TRIGGER=PASS"
+
+      - name: Generate Deployment Proof Artifact
+        env:
+          RENDER_RESPONSE: ${{ env.RENDER_RESPONSE }}
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const proof = {
+            commit: process.env.GITHUB_SHA,
+            workflow: process.env.GITHUB_WORKFLOW,
+            run_id: process.env.GITHUB_RUN_ID,
+            run_number: process.env.GITHUB_RUN_NUMBER,
+            timestamp: new Date().toISOString(),
+            verify_result: '${{ steps.verify.outcome }}',
+            render_result: '${{ steps.render.outcome }}',
+            render_hook_response: process.env.RENDER_RESPONSE || '',
+            status: 'PENDING_LIVE_VERIFICATION'
+          };
+          fs.writeFileSync('deployment-proof.json', JSON.stringify(proof, null, 2) + '\n');
+          NODE
+          cat deployment-proof.json
+
+      - name: Upload Deployment Proof Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-proof-${{ github.run_id }}
+          path: deployment-proof.json
+          if-no-files-found: error
