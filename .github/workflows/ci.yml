@@ -30,6 +30,10 @@ jobs:
         run: npm run build
       - name: Verify
         run: npm run verify
+      - name: Build Cloudflare Pages output
+        run: npm run build:pages
+      - name: Verify Cloudflare Pages packaging
+        run: npm run verify:pages
       - name: Enforce silo boundaries
         run: node scripts/silo-integrity.js
       - name: Ecosystem scaffold gate
@@ -50,6 +54,7 @@ jobs:
             "run_id": "${{ github.run_id }}",
             "run_number": "${{ github.run_number }}",
             "status": "${{ job.status }}",
+            "cloudflare_pages": "STATIC_PACKAGE_VERIFIED",
             "economic_event_rule": "EXTERNAL_CUSTOMER",
             "revenue_claim": "UNPROVEN_UNTIL_EXTERNAL_CUSTOMER_EVENT"
           }
@@ -60,5 +65,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ci-proof-${{ github.run_id }}
-          path: proof/ci-proof.json
+          path: |
+            proof/ci-proof.json
+            Proof/Cloudflare/cloudflare-pages-proof.json
           if-no-files-found: error
