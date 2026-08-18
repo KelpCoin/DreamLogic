@@ -3,14 +3,6 @@ name: DreamLedger GitHub Pages
 on:
   push:
     branches: [main]
-    paths:
-      - 'docs/**'
-      - 'scripts/**'
-      - 'config/**'
-      - 'Proof/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
@@ -28,19 +20,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-
       - name: Install dependencies
         run: npm ci
-
       - name: Compile DreamLedger release
         run: npm run build
-
       - name: Verify compiled Pages surface
         run: |
           test -f dist-pages/index.html
@@ -48,15 +36,12 @@ jobs:
           test -f dist-pages/CNAME
           test -f dist-pages/compiler-manifest.json
           node -e "const x=require('./dist-pages/compiler-manifest.json'); if(x.status!=='PASS'||x.targets.dreamledger.silo!=='MTG'||x.targets.amplissa.compiled!==false) process.exit(1); console.log('PASS compiler boundary')"
-
       - name: Configure Pages
         uses: actions/configure-pages@v5
-
       - name: Upload compiled static site
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist-pages
-
       - name: Upload compiler proof
         uses: actions/upload-artifact@v4
         with:
@@ -73,13 +58,20 @@ jobs:
       - name: Deploy compiled DreamLedger static surface
         id: deployment
         uses: actions/deploy-pages@v4
-
+      - name: Probe GitHub Pages deployment URL
+        run: |
+          set -euo pipefail
+          URL="${{ steps.deployment.outputs.page_url }}"
+          CODE=$(curl --location --silent --show-error --output /tmp/dreamledger.html --write-out '%{http_code}' --max-time 20 "$URL")
+          test "$CODE" = "200"
+          grep -q "DreamLedger" /tmp/dreamledger.html
+          echo "PASS Pages deployment HTTP 200: $URL"
       - name: Probe custom domain
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            CODE=$(curl --location --silent --show-error --output /tmp/dreamledger.html --write-out '%{http_code}' --max-time 10 https://dreamledger.org/ || true)
-            if [ "$CODE" = "200" ] && grep -q "DreamLedger" /tmp/dreamledger.html; then
+            CODE=$(curl --location --silent --show-error --output /tmp/dreamledger-custom.html --write-out '%{http_code}' --max-time 10 https://dreamledger.org/ || true)
+            if [ "$CODE" = "200" ] && grep -q "DreamLedger" /tmp/dreamledger-custom.html; then
               echo "PASS dreamledger.org HTTP 200"
               exit 0
             fi
