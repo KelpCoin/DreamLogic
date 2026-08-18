@@ -9,6 +9,10 @@ function check(name, ok, detail = '') {
 function read(rel) { return fs.readFileSync(path.join(root, rel), 'utf8'); }
 
 const mtg = read('mtg.html');
+const index = read('index.html');
+const revenue = read('revenue.html');
+const marketplace = read('marketplace.html');
+const dreamiez = read('dreamiez/index.html');
 const server = read('server.js');
 const productsDir = path.join(root, 'catalog', 'products');
 const products = fs.existsSync(productsDir)
@@ -27,6 +31,15 @@ check('Server marketplace filters B2B', server.includes("String(x.silo || '').to
 check('Catalog contains no non-MTG record masquerading as MTG', products.filter(p => String(p.silo || '').toUpperCase() === 'MTG').every(p => !/Dreamiez|B2B|Kelplantis|adult|cosmetic/i.test(JSON.stringify(p))));
 check('All catalog records declare a silo', products.every(p => typeof p.silo === 'string' && p.silo.trim().length > 0));
 check('MTG checkout requires an offer id', server.includes("const id = String(req.body?.offer_id || '')"));
+
+check('Neutral front door names independent silos', ['Dreamiez','Kelplantis','MTG','BEC-PRIME'].every(x => index.includes(x)));
+check('Neutral front door has no stale empty-approval claim', !index.includes('approval registry is empty'));
+check('Revenue surface reads canonical offers API', revenue.includes("fetch('/api/offers'") && revenue.includes('canonical offers API'));
+check('Revenue surface does not claim approval registry is empty', !revenue.includes('approval registry is currently empty'));
+check('B2B marketplace labels its silo', marketplace.includes('B2B MARKETPLACE') && marketplace.includes("/api/marketplace/catalog"));
+check('B2B marketplace contains no MTG checkout path', !marketplace.includes('/api/offer-checkout/create') && !marketplace.includes('COMMANDER-DECK-DIAGNOSTIC-001'));
+check('Dreamiez surface contains no Stripe checkout', !dreamiez.includes('stripe') && !dreamiez.includes('/api/offer-checkout/create'));
+check('Dreamiez surface contains no MTG catalog references', !/COMMANDER-DECK|MTG|offer-checkout/i.test(dreamiez));
 
 process.exitCode = pass ? 0 : 1;
 console.log(pass ? 'SILO INTEGRITY PASS' : 'SILO INTEGRITY FAIL');
