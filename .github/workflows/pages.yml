@@ -7,6 +7,7 @@ on:
       - 'docs/**'
       - 'scripts/**'
       - 'config/**'
+      - 'Proof/**'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/pages.yml'
