@@ -8,7 +8,9 @@
     "start": "node server.js",
     "compile:offers": "node scripts/compile-offers.js",
     "compile:surface": "node scripts/compile-surface.js",
+    "compile:release": "node scripts/compile-release.js dreamledger",
     "build": "npm run compile:offers && npm run compile:surface",
+    "build:release": "npm run build && npm run compile:release",
     "build:pages": "npm run build && node scripts/build-pages.js",
     "verify": "node scripts/verify.js",
     "verify:pages": "node scripts/verify-pages.js"
