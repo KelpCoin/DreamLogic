@@ -32,6 +32,10 @@ jobs:
         id: verify
         run: npm run verify
 
+      - name: Enforce silo boundaries
+        id: silo
+        run: node scripts/silo-integrity.js
+
       - name: Trigger Render Deploy
         id: render
         env:
@@ -48,6 +52,7 @@ jobs:
           echo "RENDER_DEPLOY_TRIGGER=PASS"
 
       - name: Generate Deployment Proof Artifact
+        if: always()
         env:
           RENDER_RESPONSE: ${{ env.RENDER_RESPONSE }}
         run: |
@@ -60,15 +65,17 @@ jobs:
             run_number: process.env.GITHUB_RUN_NUMBER,
             timestamp: new Date().toISOString(),
             verify_result: '${{ steps.verify.outcome }}',
+            silo_result: '${{ steps.silo.outcome }}',
             render_result: '${{ steps.render.outcome }}',
             render_hook_response: process.env.RENDER_RESPONSE || '',
-            status: 'PENDING_LIVE_VERIFICATION'
+            status: '${{ job.status }}'
           };
           fs.writeFileSync('deployment-proof.json', JSON.stringify(proof, null, 2) + '\n');
           NODE
           cat deployment-proof.json
 
       - name: Upload Deployment Proof Artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: deployment-proof-${{ github.run_id }}
