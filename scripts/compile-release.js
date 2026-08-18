@@ -32,6 +32,7 @@ function copyDir(rel) {
 }
 
 for (const rel of keepFiles) copyFile(rel);
+for (const name of fs.readdirSync(SRC)) if (name.endsWith('.html')) copyFile(name);
 for (const rel of keepDirs) copyDir(rel);
 
 const packageJson = JSON.parse(fs.readFileSync(path.join(SRC, 'package.json'), 'utf8'));
