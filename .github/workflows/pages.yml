@@ -1,3 +1,4 @@
+# DreamLedger Pages deployment: every main push is a deployment candidate.
 name: DreamLedger GitHub Pages
 
 on:
