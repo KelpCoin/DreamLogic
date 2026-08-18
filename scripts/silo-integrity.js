@@ -19,9 +19,9 @@ const products = fs.existsSync(productsDir)
   ? fs.readdirSync(productsDir).filter(x => x.endsWith('.json')).map(x => JSON.parse(read(path.join('catalog', 'products', x))))
   : [];
 
-check('MTG page uses canonical offers API', mtg.includes("fetch('/api/offers')"));
+check('MTG page uses canonical offers API', mtg.includes("fetch('/api/offers',"));
 check('MTG page hard-filters MTG silo', /toUpperCase\(\)==='MTG'/.test(mtg));
-check('MTG page uses current product checkout', mtg.includes("fetch('/api/checkout/create'") && mtg.includes('product_id'));
+check('MTG page uses canonical offer checkout', mtg.includes("fetch('/api/offer-checkout/create'") && mtg.includes('offer_id'));
 check('MTG page contains no Dreamiez surface', !/Dreamiez|Cosmetic Pouch|Brush Roll|Cosmic Hoodie/i.test(mtg));
 check('MTG page contains no B2B marketplace surface', !/marketplace|B2B|seller intake|listing approval/i.test(mtg));
 check('MTG route serves dedicated mtg.html', server.includes("'/mtg': 'mtg.html'"));
