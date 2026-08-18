@@ -1,20 +1,31 @@
-# DreamLedger / MTG Commerce Engine
+# DreamLedger / BEC-PRIME Commerce Engine
 
-DreamLedger is the executable commerce pilot for KelpCoin's MTG market. The current production wedge is `COMMANDER-DECK-DIAGNOSTIC-001` at NZD 25, with Stripe Checkout and signed webhook proof as the payment contract.
+DreamLedger is an evidence-first commerce engine with isolated product silos, a canonical doorway, server-side checkout, and explicit payment proof. The repository contains the shared commerce substrate plus separate Dreamiez, B2B Marketplace, Kelplantis, and MTG surfaces.
 
-## MTG catalog
+## What this repository does
 
-The `/mtg` surface is a dedicated MTG-only catalog. It loads published commerce records from `/api/offers`, filters to the `MTG` silo, and renders them as a horizontal, swipeable carousel with snap scrolling.
+- Provides a neutral DreamLedger front door at `/`.
+- Provides Dreamiez at `/dreamiez/` with its own asset and reward boundary.
+- Provides the B2B Marketplace at `/marketplace.html` with authenticated seller intake and approval-gated listings.
+- Provides Kelplantis as a separate shared-world asset destination.
+- Provides MTG at `/mtg.html` as an isolated commerce silo.
+- Provides a canonical QR doorway at `https://qr.dreamledger.org/DL1`.
+- Provides server-side Stripe Checkout and signed webhook verification where a silo has an approved payment contract.
+- Records payment proof only from verified live Stripe events.
 
-Each sellable record can expose a secure Stripe checkout button through `/api/offer-checkout/create`. Records that are not approved for checkout remain visible but cannot be purchased.
+## Silo boundary
 
-## Current offer
+Each economic surface declares its silo explicitly. The neutral front door may link to independent silos, but silo-specific catalogues, checkout routes, approval rules, and economic claims must not leak between them.
 
-`COMMANDER-DECK-DIAGNOSTIC-001`
+MTG is one isolated pilot, not the definition of DreamLedger. Its current offer is `COMMANDER-DECK-DIAGNOSTIC-001` at NZD 25. No EDH inventory is fabricated when no real records exist.
 
-Price: NZD 25
+## B2B Marketplace
 
-Customer supplies a Commander decklist. The diagnostic focuses on the biggest weaknesses, first cuts, and highest-value upgrades.
+The B2B surface exposes only B2B listings and provides authenticated seller intake. New submissions enter `PENDING_APPROVAL` and remain non-public and non-checkoutable until an explicit approval process changes their state.
+
+## Dreamiez
+
+Dreamiez is an isolated avatar and cosmetic surface. Its current reward loop is cosmetic-only and local to the browser. It does not expose MTG checkout or B2B intake routes.
 
 ## Runtime
 
@@ -25,33 +36,15 @@ Customer supplies a Commander decklist. The diagnostic focuses on the biggest we
 - Render target hosting
 - GitHub Actions CI/CD
 
-The deployment path is designed to verify the application before invoking the Render deployment hook. `main` is the production branch.
+The production branch is `main`. The build is `npm run build` and the server starts with `npm start`.
 
-## Commerce contract
+## Commerce and proof contract
 
-The MTG page is intentionally siloed. Non-MTG products and future ecosystems are excluded from `/mtg`.
-
-Checkout uses server-side Stripe integration. The browser requests a checkout session from `/api/offer-checkout/create`; fulfillment truth comes from signed Stripe webhooks rather than from the browser return URL.
-
-Required production configuration:
-
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- `STRIPE_PRICE_NZ`
-- `STRIPE_PRICE_US`
-- `STRIPE_PRICE_EU`
-- `STRIPE_PRICE_INTL`
-- Render deployment hook configured in GitHub Actions
-
-## Proof rule
-
-No fake payment. No test transaction presented as revenue.
-
-A first-payment proof is valid only after a signed Stripe webhook is verified and the Checkout Session is in a paid/non-unpaid state.
+Checkout availability is a configuration and approval state, not evidence of revenue. A browser return from Stripe is not a payment proof. A first-payment Fossil is valid only after a signed live Stripe webhook is verified and the Checkout Session is in a paid state.
 
 `Proof/Fossils/FIRST_PAYMENT_PROOF.json`
 
-The free Render web-service filesystem is ephemeral, so a runtime fossil is not treated as durable archival evidence without a persistent sink.
+The free Render filesystem is ephemeral. A runtime Fossil is therefore runtime evidence, not durable archival evidence, unless a persistent sink is configured.
 
 ## Quick verification
 
@@ -65,22 +58,22 @@ Live:
 
 `curl https://dreamledger.org/api/offers`
 
-`curl -X POST https://dreamledger.org/api/offer-checkout/create -H "Content-Type: application/json" -d '{"offer_id":"COMMANDER-DECK-DIAGNOSTIC-001","region":"NZ"}'`
+`curl https://dreamledger.org/api/marketplace/catalog`
 
-Before production Stripe secrets and regional price IDs are configured, checkout may correctly return HTTP 503. That is a configuration gate, not simulated revenue.
+Before the required production secrets are configured, a checkout endpoint may correctly return HTTP 503. That is a configuration gate, not simulated revenue.
 
 ## Canonical doorway
 
 `https://qr.dreamledger.org/DL1`
 
-The QR doorway routes to the appropriate regional commerce surface while retaining one canonical entry point.
+The QR doorway provides one canonical entry point while routing visitors into the appropriate isolated surface.
 
 ## Deployment
 
-Render is the current execution host. GitHub Actions verifies the repository before calling the configured Render deployment hook. The production health check is `/healthz`; build command is `npm run build`; start command is `npm start`.
+Render is the current execution host. GitHub Actions verifies the repository before invoking the configured deployment path. The production health check is `/healthz`.
 
 ## Commercial truth
 
-Repository code is not revenue. A reachable checkout is not a payment. Revenue remains NZD 0 until an independently verified Stripe payment receipt exists.
+Repository code is not revenue. A reachable page is not a sale. A checkout URL is not a payment. Revenue remains NZD 0 until an independently verified live Stripe payment event exists.
 
-The immediate objective is simple: populate the MTG catalog with real sellable EDH inventory, prove checkout, capture the first verified payment, then scale distribution from evidence.
+External distribution remains approval-gated. No public launch is implied by this repository state.
