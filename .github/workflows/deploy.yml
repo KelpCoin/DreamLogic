@@ -51,6 +51,21 @@ jobs:
           } >> "$GITHUB_ENV"
           echo "RENDER_DEPLOY_TRIGGER=PASS"
 
+      - name: Probe production convergence
+        id: live_probe
+        if: success()
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            if curl --fail --silent --show-error --location --max-time 10 https://dreamledger.org/healthz -o /tmp/healthz.json; then
+              node -e "const x=require('/tmp/healthz.json'); if(x.status!=='ok') process.exit(1); console.log('PASS production health')" && exit 0
+            fi
+            echo "Waiting for Render convergence: attempt $attempt/24"
+            sleep 10
+          done
+          echo 'FAIL production convergence probe timed out'
+          exit 1
+
       - name: Generate Deployment Proof Artifact
         if: always()
         env:
@@ -67,6 +82,7 @@ jobs:
             verify_result: '${{ steps.verify.outcome }}',
             silo_result: '${{ steps.silo.outcome }}',
             render_result: '${{ steps.render.outcome }}',
+            live_probe_result: '${{ steps.live_probe.outcome }}',
             render_hook_response: process.env.RENDER_RESPONSE || '',
             status: '${{ job.status }}'
           };
