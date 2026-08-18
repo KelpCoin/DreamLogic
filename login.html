@@ -22,7 +22,7 @@
 <script>
 const form=document.getElementById('login');const status=document.getElementById('status');
 form.addEventListener('submit',async e=>{e.preventDefault();status.textContent='Signing in...';
-try{const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({email:form.email.value.trim(),password:form.password.value})});
+try{const r=await fetch('/api/account/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({email:form.email.value.trim(),password:form.password.value})});
 const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||'Sign-in failed');window.location.href=data.redirect||'/';}
 catch(err){status.textContent=err.message;}});
 </script>
