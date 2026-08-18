@@ -9,7 +9,9 @@
     "compile:offers": "node scripts/compile-offers.js",
     "compile:surface": "node scripts/compile-surface.js",
     "build": "npm run compile:offers && npm run compile:surface",
-    "verify": "node scripts/verify.js"
+    "build:pages": "npm run build && node scripts/build-pages.js",
+    "verify": "node scripts/verify.js",
+    "verify:pages": "node scripts/verify-pages.js"
   },
   "engines": { "node": ">=20" },
   "dependencies": {
