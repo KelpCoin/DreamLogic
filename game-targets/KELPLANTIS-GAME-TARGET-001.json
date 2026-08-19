@@ -1,0 +1,17 @@
+{
+  "schema_version": "BEC-GAME-TARGET-1.0",
+  "target_id": "GAME-TARGET-001",
+  "game_id": "KELPLANTIS-ARPG-001",
+  "engine": "Unity",
+  "unity_version": "2022.3.39f1",
+  "platform": "Windows",
+  "genre": "original top-down action RPG",
+  "camera": "top-down",
+  "player": { "classes": 1, "movement": true, "combat": true, "inventory": true, "equipment": true, "xp": true, "save_load": true },
+  "world": { "town": true, "dungeon": true, "dungeon_rooms": 4 },
+  "enemies": { "types": 3, "bosses": 1, "role_targeting": true },
+  "loot": { "items": 20, "rarity": true, "drops": true },
+  "skills": 10,
+  "quest": { "kill_goblins": 5 },
+  "verification": ["project_generated", "unity_compile", "windows_build", "player_runtime", "combat_runtime", "role_targeting", "loot_runtime", "save_load_runtime"]
+}

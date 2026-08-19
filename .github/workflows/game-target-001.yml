@@ -1,0 +1,82 @@
+name: GAME-TARGET-001 Kelplantis
+
+on:
+  push:
+    branches: [main, game-target-001-kelplantis]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile-game-target:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Compile Kelplantis Unity project
+        run: node scripts/game-compiler.js
+      - name: Verify compiler output
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='game-build/GAME-TARGET-001/GAME-TARGET-001-COMPILER-REPORT.json';
+          const x=JSON.parse(fs.readFileSync(p));
+          if(x.status!=='GENERATED_NOT_BUILT'||x.target_id!=='GAME-TARGET-001'||x.file_count<8) process.exit(1);
+          console.log('GAME COMPILER GENERATION PASS', x.file_count);
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: game-target-001-generated-${{ github.sha }}
+          path: game-build/GAME-TARGET-001
+
+  build-windows:
+    needs: compile-game-target
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Generate Unity project
+        run: node scripts/game-compiler.js
+      - name: Verify Unity license configuration
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        run: |
+          test -n "$UNITY_EMAIL" || { echo "BLOCKED: UNITY_EMAIL secret missing"; exit 2; }
+          test -n "$UNITY_PASSWORD" || { echo "BLOCKED: UNITY_PASSWORD secret missing"; exit 2; }
+          test -n "$UNITY_SERIAL" || { echo "BLOCKED: UNITY_SERIAL secret missing"; exit 2; }
+      - name: Build Windows executable
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: game-build/GAME-TARGET-001/UnityProject
+          unityVersion: 2022.3.39f1
+          targetPlatform: StandaloneWindows64
+          buildMethod: KelplantisBuild.BuildWindows
+      - name: Write build proof
+        if: always()
+        run: |
+          mkdir -p Proof
+          node - <<'NODE'
+          const fs=require('fs');
+          const built=fs.existsSync('game-build/GAME-TARGET-001/UnityProject/Builds/Kelplantis/Kelplantis.exe');
+          const p={schema_version:'BEC-GAME-BUILD-PROOF-1.0',target_id:'GAME-TARGET-001',windows_exe_present:built,status:built?'PASS':'NOT_PROVEN',timestamp_utc:new Date().toISOString()};
+          fs.writeFileSync('Proof/GAME-TARGET-001-BUILD-PROOF.json',JSON.stringify(p,null,2)+'\n');
+          if(!built) process.exitCode=1;
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: game-target-001-windows-${{ github.sha }}
+          path: |
+            game-build/GAME-TARGET-001/UnityProject/Builds/Kelplantis
+            Proof/GAME-TARGET-001-BUILD-PROOF.json
