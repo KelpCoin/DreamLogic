@@ -1,11 +1,11 @@
 # Kelplantis: Entity Passport, Micro-Ledgers, Echoes, and Autonomous Agents
 
 Status: DESIGN DELTA / 2026-09-21
-Scope: Kelplantis game system. This document records the refined concept against the existing game rather than replacing existing canon.
+Scope: Phin Haven game system. This document records the refined concept against the existing game rather than replacing existing canon.
 
 ## Core principle
 
-Kelplantis treats reputation as accumulated evidence, not editable biography.
+Phin Haven treats reputation as accumulated evidence, not editable biography.
 
 Every persistent entity, whether controlled by a human player or an autonomous AI agent, has a Passport derived from game events and micro-ledgers.
 
