@@ -1,0 +1,11 @@
+{
+  "schema_version": "BEC-GAME-TARGET-PROOF-1.0",
+  "target_id": "GAME-TARGET-001",
+  "game_id": "KELPLANTIS-ARPG-001",
+  "claim": "Compiler target specification for an original Diablo-style Kelplantis ARPG vertical slice.",
+  "engine": "Unity 2022.3.39f1",
+  "platform": "Windows",
+  "required_runtime": ["movement", "combat", "role-targeting goblins", "loot", "XP/levels", "town", "dungeon", "save/load"],
+  "revenue": "OUT OF SCOPE",
+  "status": "TARGET_DEFINED_NOT_BUILD_PROVEN"
+}
