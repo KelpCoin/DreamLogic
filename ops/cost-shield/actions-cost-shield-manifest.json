@@ -1,0 +1,49 @@
+{
+  "schema": "beck/actions-cost-shield/v1",
+  "repo": "KelpCoin/DreamLogic",
+  "at": "2026-11-08 NZDT",
+  "before": "26743e863c90a49a07eb7e45f0487fc21f2926a7",
+  "paused_count": 7,
+  "archived_dir": ".github/workflows-paused",
+  "workflow_blobs": [
+    {
+      "name": "ci.yml",
+      "sha": "ede62dd1439e940347df5dfe341a45adf7631e94",
+      "path": ".github/workflows/ci.yml"
+    },
+    {
+      "name": "deploy.yml",
+      "sha": "852378d2a80009ace419e31109764f86bb7db6ec",
+      "path": ".github/workflows/deploy.yml"
+    },
+    {
+      "name": "force-pages-dispatch.yml",
+      "sha": "cb9a75aca32f1d06e02cc4fad8e7a9a4b3c1c146",
+      "path": ".github/workflows/force-pages-dispatch.yml"
+    },
+    {
+      "name": "live-commerce-gate.yml",
+      "sha": "cf87f18c060e1df61287dad398b5530ecaf0d755",
+      "path": ".github/workflows/live-commerce-gate.yml"
+    },
+    {
+      "name": "pages.yml",
+      "sha": "4c1af413aab874bd257b655bfb12ed4847711705",
+      "path": ".github/workflows/pages.yml"
+    },
+    {
+      "name": "release-compiler.yml",
+      "sha": "468203a0d5d7276349f73c18d5d8af55e45181fd",
+      "path": ".github/workflows/release-compiler.yml"
+    },
+    {
+      "name": "verify.yml",
+      "sha": "ab30933b29ef44662cd22d428a961090a2839e69",
+      "path": ".github/workflows/verify.yml"
+    }
+  ],
+  "incident": "Actions account 2001/2000 minutes",
+  "billing_cap_verified": false,
+  "proof_type": "GitHub commit and original blob equivalence",
+  "production_release_authorized": false
+}
