@@ -1,71 +1,34 @@
-name: DreamLedger CI
-
+name: Retired DreamLogic Archive Security
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
-
-concurrency:
-  group: dreamledger-ci-${{ github.ref }}
-  cancel-in-progress: false
-
 jobs:
-  verify:
+  archive:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 3
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - name: Install dependencies
-        run: npm install
-      - name: Build
-        run: npm run build
-      - name: Verify
-        run: npm run verify
-      - name: Build Cloudflare Pages output
-        run: npm run build:pages
-      - name: Verify Cloudflare Pages packaging
-        run: npm run verify:pages
-      - name: Enforce silo boundaries
-        run: node scripts/silo-integrity.js
-      - name: Ecosystem scaffold gate
-        run: node scripts/ecosystem-gate.js
-      - name: Gauntlet evidence gate
-        env:
-          RUN_ID: ${{ github.run_id }}
-          ECONOMIC_EVENT_TYPE: NONE
-        run: node scripts/gauntlet/index.js
-      - name: Write CI proof
-        if: always()
+      - uses: actions/checkout@v4
+      - name: Verify no legacy deploy path and no stale checkout
         run: |
-          mkdir -p proof
-          cat > proof/ci-proof.json <<'JSON'
-          {
-            "commit": "${{ github.sha }}",
-            "workflow": "${{ github.workflow }}",
-            "run_id": "${{ github.run_id }}",
-            "run_number": "${{ github.run_number }}",
-            "status": "${{ job.status }}",
-            "cloudflare_pages": "STATIC_PACKAGE_VERIFIED",
-            "economic_event_rule": "EXTERNAL_CUSTOMER",
-            "revenue_claim": "UNPROVEN_UNTIL_EXTERNAL_CUSTOMER_EVENT"
-          }
-          JSON
-          cat proof/ci-proof.json
-      - name: Upload CI proof
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-proof-${{ github.run_id }}
-          path: |
-            proof/ci-proof.json
-            Proof/Cloudflare/cloudflare-pages-proof.json
-          if-no-files-found: error
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          for p in (".github/workflows/pages.yml",".github/workflows/deploy.yml",".github/workflows/force-pages-dispatch.yml"):
+              s=Path(p).read_text()
+              assert "on:" in s and "workflow_dispatch:" in s,p
+              for forbidden in ("deploy-pages@", "upload-pages-artifact@", "RENDER_DEPLOY_HOOK_URL","push:"):
+                  assert forbidden not in s,p
+          for p in ("index.html","engine.html","proofs.html","ip.html"):
+              s=Path(p).read_text()
+              assert "https://dreamledger.org/" in s,p
+              assert "buy.stripe.com" not in s,p
+              assert "BEC-PRIME" not in s,p
+              assert "Elohim" not in s,p
+          assert "retired" in Path("README.md").read_text().lower()
+          print(json.dumps({"schema":"dreamlogic/retired-archive-gauntlet/v1","verdict":"PASS","economic_truth":"UNVERIFIED","deployment_authority":False},sort_keys=True))
+          PY
