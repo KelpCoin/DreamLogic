@@ -1,28 +1,20 @@
-name: Force DreamLedger Pages
+# This repository is retired and must never deploy or modify the canonical DreamLedger service.
+# Do not restore this action without a separate, reviewed ownership decision.
+name: Archived Force Pages Deployment (disabled)
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
-  deploy:
+  archive-proof:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - run: npm install
-      - run: npm run build
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist-pages
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Confirm archive-only status
+        run: |
+          echo "RETIRED_REPOSITORY_DEPLOYMENT_DISABLED=PASS"
+          echo "NO_RENDER_DEPLOY_NO_GITHUB_PAGES_PUBLISH"
